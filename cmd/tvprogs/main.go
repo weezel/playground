@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -20,6 +21,7 @@ var (
 	flagWholeDay  bool
 	flagShowDates bool
 	flagFromFile  bool
+	flagToJSON    bool
 )
 
 var channelOrder = []string{
@@ -44,8 +46,8 @@ var channelOrder = []string{
 var helsinkiTZ, _ = time.LoadLocation("Europe/Helsinki")
 
 type Program struct {
-	StartTime time.Time
-	Name      string
+	StartTime time.Time `json:"start_time,omitempty"`
+	Name      string    `json:"name,omitempty"`
 }
 
 func (p Program) String() string {
@@ -86,6 +88,15 @@ func (c Channels) ShowWholeDay() {
 			fmt.Printf("\t%s\n", prog.String())
 		}
 	}
+}
+
+func (c Channels) ToJSON() ([]byte, error) {
+	j, err := json.MarshalIndent(c, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("json marshal: %w", err)
+	}
+
+	return j, nil
 }
 
 func parseIltapulu(r io.Reader, now time.Time) (Channels, error) {
@@ -207,6 +218,7 @@ func main() {
 	flag.BoolVar(&flagFromFile, "f", false, "Read from iltapulu.html")
 	flag.BoolVar(&flagWholeDay, "d", false, "Show the whole day's info")
 	flag.BoolVar(&flagShowDates, "D", false, "Also print dates")
+	flag.BoolVar(&flagToJSON, "j", false, "Dump to JSON")
 	flag.Parse()
 
 	var data []byte
@@ -223,9 +235,16 @@ func main() {
 		log.Panicf("Parsing failed: %v\n", err)
 	}
 
-	if flagWholeDay {
+	switch {
+	case flagWholeDay:
 		channels.ShowWholeDay()
-	} else {
+	case flagToJSON:
+		j, err := channels.ToJSON()
+		if err != nil {
+			log.Panicf("JSON marshal failed: %v", err)
+		}
+		fmt.Printf("%s\n", j)
+	default:
 		channels.ShowUpcoming(now)
 	}
 }

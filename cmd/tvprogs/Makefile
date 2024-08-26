@@ -1,5 +1,5 @@
 include ../../Makefile
 
-name		?= tvprogs
+name		?= iltapulu
 
 build: _build
