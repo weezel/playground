@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -11,6 +10,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"weezel/playground/cmd/tvprogs/programinfo"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -24,88 +25,15 @@ var (
 	flagToJSON    bool
 )
 
-var channelOrder = []string{
-	"Yle TV1",
-	"Yle TV2",
-	"MTV3",
-	"Nelonen",
-	"Yle Teema & Fem",
-	"MTV Sub",
-	"TV5",
-	"Liv",
-	"Jim",
-	"Kutonen",
-	"TLC",
-	"STAR Channel",
-	"MTV Ava",
-	"Hero",
-	"Frii",
-	"National Geographic",
-}
-
 var helsinkiTZ, _ = time.LoadLocation("Europe/Helsinki")
 
-type Program struct {
-	StartTime time.Time `json:"start_time,omitempty"`
-	Name      string    `json:"name,omitempty"`
-}
-
-func (p Program) String() string {
-	if flagShowDates {
-		return fmt.Sprintf("[%s] %s", p.StartTime.Format("2006-01-02 15:04"), p.Name)
-	}
-	return fmt.Sprintf("[%s] %s", p.StartTime.Format("15:04"), p.Name)
-}
-
-type Channels map[string][]Program
-
-func (c Channels) ShowUpcoming(offset time.Time) {
-	log.Println("Offset start time:", offset)
-	for _, channel := range channelOrder {
-		fmt.Printf("%s\n", channel)
-
-		for i := 0; i < len(c[channel]); i++ {
-			prog := c[channel][i]
-			if i+1 < len(c[channel]) {
-				isOnAir := offset.After(prog.StartTime) &&
-					offset.Before(c[channel][i+1].StartTime)
-				isAfter := offset.After(prog.StartTime)
-				if !isOnAir && isAfter {
-					continue
-				}
-			}
-
-			fmt.Printf("\t%s\n", prog.String())
-		}
-	}
-}
-
-func (c Channels) ShowWholeDay() {
-	for _, channel := range channelOrder {
-		fmt.Printf("%s\n", channel)
-
-		for _, prog := range c[channel] {
-			fmt.Printf("\t%s\n", prog.String())
-		}
-	}
-}
-
-func (c Channels) ToJSON() ([]byte, error) {
-	j, err := json.MarshalIndent(c, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("json marshal: %w", err)
-	}
-
-	return j, nil
-}
-
-func parseIltapulu(r io.Reader, now time.Time) (Channels, error) {
+func parseIltapulu(r io.Reader, now time.Time) (programinfo.Channels, error) {
 	doc, err := goquery.NewDocumentFromReader(r)
 	if err != nil {
-		return Channels{}, fmt.Errorf("read document: %w", err)
+		return programinfo.Channels{}, fmt.Errorf("read document: %w", err)
 	}
 
-	channels := Channels{}
+	channels := programinfo.Channels{}
 	pat := `ul.daypart-block`
 	doc.Find(pat).Each(func(_ int, s *goquery.Selection) {
 		channelName, ok := s.Parent().Find("section > a.channel-header").Attr("title")
@@ -113,7 +41,7 @@ func parseIltapulu(r io.Reader, now time.Time) (Channels, error) {
 			log.Panicf("Failed to get channel info")
 		}
 
-		programs := []Program{}
+		programs := []programinfo.Program{}
 		s.Find(`ul > li`).Each(func(_ int, ss *goquery.Selection) {
 			startTime := ss.Find(`time`).Text()
 			progTime, err := time.Parse("15.04", startTime)
@@ -133,14 +61,14 @@ func parseIltapulu(r io.Reader, now time.Time) (Channels, error) {
 
 			prog := ss.Find(`b > a.op`).Text()
 
-			programs = append(programs, Program{
+			programs = append(programs, programinfo.Program{
 				StartTime: progTime,
 				Name:      prog,
 			})
 		})
 
 		if _, ok := channels[channelName]; !ok {
-			channels[channelName] = []Program{}
+			channels[channelName] = []programinfo.Program{}
 		}
 		progs := channels[channelName]
 		progs = append(progs, programs...)
@@ -230,7 +158,7 @@ func main() {
 
 	now := time.Now().In(helsinkiTZ)
 	var err error
-	var channels Channels
+	var channels programinfo.Channels
 	if channels, err = parseIltapulu(bytes.NewReader(data), now); err != nil {
 		log.Panicf("Parsing failed: %v\n", err)
 	}

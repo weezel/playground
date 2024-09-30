@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"weezel/playground/cmd/tvprogs/programinfo"
 )
 
 func Test_parseIltapuluScheduleOrder(t *testing.T) {
@@ -19,7 +21,7 @@ func Test_parseIltapuluScheduleOrder(t *testing.T) {
 	defer f.Close()
 
 	someTime := time.Date(2024, 7, 21, 0, 0, 0, 0, helsinkiTZ)
-	var channels Channels
+	var channels programinfo.Channels
 	if channels, err = parseIltapulu(f, someTime); err != nil {
 		t.Fatalf("parse Iltapulu: %v", err)
 	}
