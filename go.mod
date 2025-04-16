@@ -1,6 +1,7 @@
 module weezel/playground
 
 go 1.23
+toolchain go1.24.1
 
 require (
 	github.com/PuerkitoBio/goquery v1.10.0
@@ -23,13 +24,13 @@ require (
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/termenv v0.15.3-0.20240618155329-98d742f6907a // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	golang.org/x/sync v0.10.0 // indirect
-	golang.org/x/sys v0.28.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
+	golang.org/x/sync v0.12.0 // indirect
+	golang.org/x/sys v0.31.0 // indirect
+	golang.org/x/text v0.23.0 // indirect
 )
 
 require (
 	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/charmbracelet/bubbles v0.20.0
-	golang.org/x/net v0.33.0 // indirect
+	golang.org/x/net v0.38.0 // indirect
 )
